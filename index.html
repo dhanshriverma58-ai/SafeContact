@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="description" content="SafeContact - Emergency Safety Platform. Your Safety, Always Within Reach! Fast SOS alerts, consent-based live location sharing, emergency helplines, and first-aid guide.">
+  <meta name="theme-color" content="#8CC7C4">
+  <title>SafeContact — Your Safety, Always Within Reach!</title>
+
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome 6 Free CDN for accessible icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <!-- SafeContact Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="safecontact-app">
+
+  <!-- ================= TOP HEADER / NAVBAR ================= -->
+  <header class="app-header" id="appHeader">
+    <div class="header-container">
+      <!-- Brand Logo & Tagline -->
+      <div class="brand-wrapper">
+        <div class="brand-logo" aria-hidden="true">
+          <i class="fa-solid fa-shield-heart"></i>
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-name">SafeContact</h1>
+          <p class="brand-tagline" data-i18n="tagline">“Your Safety, Always Within Reach!”</p>
+        </div>
+      </div>
+
+      <!-- Live Status & Mode Badge -->
+      <div class="header-status-group">
+        <div class="status-pill status-secure" id="headerStatusPill" role="status" aria-live="polite">
+          <span class="status-dot"></span>
+          <span id="headerStatusText" data-i18n="statusProtected">System Protected</span>
+        </div>
+        <div class="backend-pill" id="backendPill" title="Backend connection status">
+          <i class="fa-solid fa-server"></i>
+          <span id="backendStatusLabel">Detecting Backend...</span>
+        </div>
+      </div>
+
+      <!-- Controls: View Mode, Language, PIN, Profile -->
+      <div class="header-actions">
+        <!-- View Mode Switcher -->
+        <div class="view-switcher" role="group" aria-label="Dashboard View Selector">
+          <button type="button" class="view-btn active" id="btnViewSplit" title="Dual Presentation View (User + Monitor)" aria-pressed="true">
+            <i class="fa-solid fa-columns"></i>
+            <span class="view-btn-text" data-i18n="dualView">Dual View</span>
+          </button>
+          <button type="button" class="view-btn" id="btnViewUser" title="User Dashboard Only" aria-pressed="false">
+            <i class="fa-solid fa-user-shield"></i>
+            <span class="view-btn-text" data-i18n="userView">User</span>
+          </button>
+          <button type="button" class="view-btn" id="btnViewMonitor" title="Emergency Contact Monitor" aria-pressed="false">
+            <i class="fa-solid fa-tower-broadcast"></i>
+            <span class="view-btn-text" data-i18n="monitorView">Monitor</span>
+          </button>
+        </div>
+
+        <!-- Language Selector -->
+        <div class="language-dropdown-wrapper">
+          <label for="langSelect" class="sr-only">Choose Language</label>
+          <div class="select-icon-wrapper">
+            <i class="fa-solid fa-globe"></i>
+            <select id="langSelect" class="lang-select" aria-label="Select Language">
+              <option value="en">English (EN)</option>
+              <option value="hi">हिंदी (Hindi)</option>
+              <option value="mr">मराठी (Marathi)</option>
+              <option value="bn">বাংলা (Bengali)</option>
+              <option value="te">తెలుగు (Telugu)</option>
+              <option value="ta">தமிழ் (Tamil)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Security PIN Lock Button -->
+        <button type="button" class="icon-action-btn" id="btnPinLock" title="Security PIN Controls" aria-label="Security PIN Controls">
+          <i class="fa-solid fa-lock" id="pinIcon"></i>
+          <span class="btn-text-responsive" id="pinButtonLabel" data-i18n="pinNav">PIN</span>
+        </button>
+
+        <!-- Profile / Settings Button -->
+        <button type="button" class="icon-action-btn profile-btn" id="btnProfile" title="User Profile & Settings" aria-label="Profile and Settings">
+          <div class="user-avatar" id="headerAvatar">JD</div>
+          <span class="btn-text-responsive" id="headerUserName">Jane Doe</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= ACTIVE SOS NOTIFICATION BANNER ================= -->
+  <div class="sos-global-banner hidden" id="sosGlobalBanner" role="alert">
+    <div class="banner-inner">
+      <div class="banner-icon-pulse">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div class="banner-content">
+        <strong data-i18n="sosActiveAlert">EMERGENCY SOS ALERT ACTIVE!</strong>
+        <span id="bannerDetailsText">Alert dispatched to emergency contacts with real-time tracking enabled.</span>
+      </div>
+      <div class="banner-actions">
+        <button type="button" class="banner-resolve-btn" id="btnBannerResolve" data-i18n="resolveSos">
+          <i class="fa-solid fa-circle-check"></i> Resolve Alert
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PIN LOCKED COVER OVERLAY ================= -->
+  <div class="pin-locked-screen hidden" id="pinLockedScreen" role="dialog" aria-modal="true" aria-labelledby="pinLockedTitle">
+    <div class="pin-card">
+      <div class="pin-card-icon">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <h2 id="pinLockedTitle" data-i18n="pinLockedHeading">SafeContact Protected Area</h2>
+      <p class="pin-card-subtitle" data-i18n="pinLockedDesc">Enter your 4-digit Security PIN to access your safety dashboard.</p>
+
+      <div class="pin-input-group">
+        <input type="password" maxlength="1" class="pin-box" inputmode="numeric" pattern="[0-9]*" aria-label="PIN digit 1" autocomplete="off">
+        <input type="password" maxlength="1" class="pin-box" inputmode="numeric" pattern="[0-9]*" aria-label="PIN digit 2" autocomplete="off">
+        <input type="password" maxlength="1" class="pin-box" inputmode="numeric" pattern="[0-9]*" aria-label="PIN digit 3" autocomplete="off">
+        <input type="password" maxlength="1" class="pin-box" inputmode="numeric" pattern="[0-9]*" aria-label="PIN digit 4" autocomplete="off">
+      </div>
+      <div class="pin-error-msg hidden" id="pinUnlockError" role="alert" data-i18n="pinIncorrect">Incorrect PIN. Please try again.</div>
+
+      <div class="pin-card-actions">
+        <button type="button" class="btn-primary" id="btnSubmitUnlockPin" data-i18n="unlock">
+          <i class="fa-solid fa-unlock-keyhole"></i> Unlock Dashboard
+        </button>
+      </div>
+      <p class="pin-demo-disclaimer" data-i18n="pinNote">
+        <i class="fa-solid fa-circle-info"></i> Prototype Lock: Local PIN validation for project demonstration. Use verified server auth in production.
+      </p>
+    </div>
+  </div>
+
+  <!-- ================= MAIN DASHBOARD CONTAINER ================= -->
+  <main class="main-content" id="mainContent">
+    <div class="dashboard-grid split-layout" id="dashboardGrid">
+
+      <!-- ======================================================== -->
+      <!-- COLUMN 1: USER DASHBOARD (PERSONAL SAFETY AREA)         -->
+      <!-- ======================================================== -->
+      <section class="dashboard-panel user-panel" id="userPanel" aria-labelledby="userDashboardHeading">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2 id="userDashboardHeading" class="panel-title">
+              <i class="fa-solid fa-user-shield"></i>
+              <span data-i18n="userDashboardTitle">User Safety Dashboard</span>
+            </h2>
+            <span class="panel-subtitle" data-i18n="userDashboardSubtitle">Immediate emergency access and personal safety controls</span>
+          </div>
+          <div class="panel-badge-pill" id="userSessionBadge">
+            <i class="fa-solid fa-circle-check"></i> <span data-i18n="activeUser">Active Profile</span>
+          </div>
+        </div>
+
+        <div class="panel-body">
+
+          <!-- 1. SOS EMERGENCY TRIGGER ZONE -->
+          <div class="emergency-hero-card" id="sosHeroCard">
+            <div class="sos-card-inner">
+              <div class="sos-text-col">
+                <span class="emergency-eyebrow" data-i18n="emergencyTriggerEyebrow">EMERGENCY ASSISTANCE</span>
+                <h3 class="emergency-headline" data-i18n="sosButtonTitle">Instant Emergency SOS</h3>
+                <p class="emergency-desc" data-i18n="sosButtonSubtitle">
+                  Notifies your registered emergency contacts and dispatches your alert. Location sharing is requested with explicit consent.
+                </p>
+                <div class="sos-meta-status">
+                  <span class="meta-label" data-i18n="sosStatusLabel">Current SOS State:</span>
+                  <span class="meta-value badge-secure" id="sosStatusBadge" data-i18n="statusSecure">SAFE / INACTIVE</span>
+                </div>
+              </div>
+
+              <!-- Prominent Interactive SOS Button -->
+              <div class="sos-action-col">
+                <button type="button" class="sos-big-btn" id="btnSosTrigger" aria-label="Activate Emergency SOS Alert">
+                  <div class="sos-btn-pulse"></div>
+                  <div class="sos-btn-content">
+                    <span class="sos-btn-main">SOS</span>
+                    <span class="sos-btn-sub" data-i18n="sosPressAction">TAP TO ALERT</span>
+                  </div>
+                </button>
+                <div class="sos-hint" data-i18n="sosConfirmHint">Includes confirmation step to prevent accidental clicks</div>
+              </div>
+            </div>
+
+            <!-- Active SOS Control Toolbar (shown when SOS is active) -->
+            <div class="sos-active-controls hidden" id="sosActiveControls">
+              <div class="sos-active-info">
+                <div class="active-pulse-dot"></div>
+                <div>
+                  <div class="active-title" id="activeAlertTitle">SOS ALERT #SC-LIVE ACTIVE</div>
+                  <div class="active-time" id="activeAlertTime">Triggered: Just now</div>
+                </div>
+              </div>
+              <div class="sos-active-btns">
+                <button type="button" class="btn-cancel-sos" id="btnCancelSos" data-i18n="cancelSosBtn">
+                  <i class="fa-solid fa-circle-xmark"></i> Resolve / Cancel SOS
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. CONSENT-BASED LIVE LOCATION SHARING -->
+          <div class="card location-card" id="locationSection">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon"><i class="fa-solid fa-location-crosshairs"></i></div>
+                <div>
+                  <h3 class="card-title" data-i18n="liveLocationTitle">Consent-Based Live Location</h3>
+                  <p class="card-subtitle" data-i18n="liveLocationSubtitle">Share your GPS coordinates only when you explicitly choose to</p>
+                </div>
+              </div>
+              <div class="location-status-badge" id="locStatusBadge">
+                <span class="badge-dot dot-inactive" id="locStatusDot"></span>
+                <span id="locStatusText" data-i18n="locStatusOff">Location Sharing: OFF</span>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <!-- Explanation Notice -->
+              <div class="info-callout" id="locationInfoNotice">
+                <i class="fa-solid fa-shield-halved callout-icon"></i>
+                <div class="callout-text">
+                  <strong data-i18n="whyLocationTitle">Why location permission is requested:</strong>
+                  <p data-i18n="whyLocationDesc">
+                    SafeContact uses the browser Geolocation API to transmit your exact coordinates to your designated emergency contacts during an emergency. We never track or share your position without your explicit consent.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Location Telemetry Bar -->
+              <div class="location-telemetry-bar">
+                <div class="telemetry-item">
+                  <span class="telemetry-label" data-i18n="latitudeLabel">Latitude</span>
+                  <span class="telemetry-value" id="valLat">--.----</span>
+                </div>
+                <div class="telemetry-item">
+                  <span class="telemetry-label" data-i18n="longitudeLabel">Longitude</span>
+                  <span class="telemetry-value" id="valLng">--.----</span>
+                </div>
+                <div class="telemetry-item">
+                  <span class="telemetry-label" data-i18n="accuracyLabel">Accuracy</span>
+                  <span class="telemetry-value" id="valAccuracy">-- m</span>
+                </div>
+                <div class="telemetry-item">
+                  <span class="telemetry-label" data-i18n="lastUpdatedLabel">Last Updated</span>
+                  <span class="telemetry-value" id="valLastUpdated">Not Active</span>
+                </div>
+              </div>
+
+              <!-- Location Interactive Map -->
+              <div class="map-container-wrapper">
+                <div id="userMap" class="leaflet-map-canvas" aria-label="Interactive map showing user live location"></div>
+                <div class="map-overlay-status" id="userMapOverlay">
+                  <i class="fa-solid fa-map-location-dot"></i>
+                  <span id="userMapOverlayText" data-i18n="mapStandby">Location sharing inactive. Click "Share Live Location" below.</span>
+                </div>
+              </div>
+
+              <!-- Location Action Buttons -->
+              <div class="location-btn-toolbar">
+                <button type="button" class="btn-primary" id="btnStartLocation">
+                  <i class="fa-solid fa-satellite-dish"></i>
+                  <span data-i18n="btnStartLocation">Share Live Location</span>
+                </button>
+                <button type="button" class="btn-stop-location hidden" id="btnStopLocation">
+                  <i class="fa-solid fa-circle-stop"></i>
+                  <span data-i18n="btnStopLocation">STOP LIVE LOCATION</span>
+                </button>
+                <button type="button" class="btn-secondary" id="btnSimulateLocation" title="Demonstrate live location updates without hardware GPS">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i>
+                  <span data-i18n="btnSimulateLoc">Simulate Live Move (Demo)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. EMERGENCY SERVICES (4 Clear Service Cards) -->
+          <div class="card services-card" id="servicesSection">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon"><i class="fa-solid fa-phone-volume"></i></div>
+                <div>
+                  <h3 class="card-title" data-i18n="servicesTitle">Direct Emergency Services</h3>
+                  <p class="card-subtitle" data-i18n="servicesSubtitle">One-tap telephone links for immediate institutional assistance</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <div class="services-grid">
+                <!-- Police — 112 -->
+                <div class="service-box">
+                  <div class="service-box-header">
+                    <div class="service-avatar police-avatar">
+                      <i class="fa-solid fa-shield"></i>
+                    </div>
+                    <span class="service-badge" data-i18n="policeBadge">Law Enforcement</span>
+                  </div>
+                  <h4 class="service-title" data-i18n="policeTitle">Police Department</h4>
+                  <p class="service-desc" data-i18n="policeDesc">For immediate security, crime prevention, and emergency response.</p>
+                  <a href="tel:112" class="service-call-btn" aria-label="Call Police at 112">
+                    <i class="fa-solid fa-phone"></i>
+                    <span class="call-text">112</span>
+                  </a>
+                </div>
+
+                <!-- Ambulance — 108 -->
+                <div class="service-box">
+                  <div class="service-box-header">
+                    <div class="service-avatar ambulance-avatar">
+                      <i class="fa-solid fa-truck-medical"></i>
+                    </div>
+                    <span class="service-badge" data-i18n="ambulanceBadge">Medical Support</span>
+                  </div>
+                  <h4 class="service-title" data-i18n="ambulanceTitle">Medical Ambulance</h4>
+                  <p class="service-desc" data-i18n="ambulanceDesc">Paramedic assistance, patient transport, and trauma emergencies.</p>
+                  <a href="tel:108" class="service-call-btn" aria-label="Call Ambulance at 108">
+                    <i class="fa-solid fa-phone"></i>
+                    <span class="call-text">108</span>
+                  </a>
+                </div>
+
+                <!-- Fire Brigade — 101 -->
+                <div class="service-box">
+                  <div class="service-box-header">
+                    <div class="service-avatar fire-avatar">
+                      <i class="fa-solid fa-fire-extinguisher"></i>
+                    </div>
+                    <span class="service-badge" data-i18n="fireBadge">Fire & Rescue</span>
+                  </div>
+                  <h4 class="service-title" data-i18n="fireTitle">Fire Brigade</h4>
+                  <p class="service-desc" data-i18n="fireDesc">Fire outbreaks, trapped rescue operations, and hazardous hazards.</p>
+                  <a href="tel:101" class="service-call-btn" aria-label="Call Fire Brigade at 101">
+                    <i class="fa-solid fa-phone"></i>
+                    <span class="call-text">101</span>
+                  </a>
+                </div>
+
+                <!-- Emergency Number — 112 -->
+                <div class="service-box">
+                  <div class="service-box-header">
+                    <div class="service-avatar emergency-avatar">
+                      <i class="fa-solid fa-headset"></i>
+                    </div>
+                    <span class="service-badge" data-i18n="allInOneBadge">All-in-One Helpline</span>
+                  </div>
+                  <h4 class="service-title" data-i18n="emergencyTitle">National Emergency</h4>
+                  <p class="service-desc" data-i18n="emergencyDesc">Single emergency response number (ERSS) across India.</p>
+                  <a href="tel:112" class="service-call-btn" aria-label="Call National Emergency at 112">
+                    <i class="fa-solid fa-phone"></i>
+                    <span class="call-text">112</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. EMERGENCY HELPLINES -->
+          <div class="card helplines-card" id="helplinesSection">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon"><i class="fa-solid fa-hands-holding-child"></i></div>
+                <div>
+                  <h3 class="card-title" data-i18n="helplinesTitle">Specialized Helplines</h3>
+                  <p class="card-subtitle" data-i18n="helplinesSubtitle">Dedicated support lines for vulnerable and specific groups</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <div class="helplines-grid">
+                <!-- Women Helpline — 181 -->
+                <div class="helpline-card">
+                  <div class="helpline-info">
+                    <div class="helpline-icon"><i class="fa-solid fa-person-dress"></i></div>
+                    <div>
+                      <h4 class="helpline-name" data-i18n="womenHelplineTitle">Women Helpline</h4>
+                      <p class="helpline-desc" data-i18n="womenHelplineDesc">24/7 confidential safety & crisis assistance for women</p>
+                    </div>
+                  </div>
+                  <a href="tel:181" class="helpline-call-btn" aria-label="Call Women Helpline at 181">
+                    <i class="fa-solid fa-phone"></i> 181
+                  </a>
+                </div>
+
+                <!-- Child Helpline — 1098 -->
+                <div class="helpline-card">
+                  <div class="helpline-info">
+                    <div class="helpline-icon"><i class="fa-solid fa-children"></i></div>
+                    <div>
+                      <h4 class="helpline-name" data-i18n="childHelplineTitle">Child Helpline</h4>
+                      <p class="helpline-desc" data-i18n="childHelplineDesc">Emergency support for children in need of care and protection</p>
+                    </div>
+                  </div>
+                  <a href="tel:1098" class="helpline-call-btn" aria-label="Call Child Helpline at 1098">
+                    <i class="fa-solid fa-phone"></i> 1098
+                  </a>
+                </div>
+
+                <!-- Senior Citizen Helpline — 14567 -->
+                <div class="helpline-card">
+                  <div class="helpline-info">
+                    <div class="helpline-icon"><i class="fa-solid fa-person-cane"></i></div>
+                    <div>
+                      <h4 class="helpline-name" data-i18n="seniorHelplineTitle">Senior Citizen Helpline</h4>
+                      <p class="helpline-desc" data-i18n="seniorHelplineDesc">Support, safety, and elder abuse intervention services</p>
+                    </div>
+                  </div>
+                  <a href="tel:14567" class="helpline-call-btn" aria-label="Call Senior Citizen Helpline at 14567">
+                    <i class="fa-solid fa-phone"></i> 14567
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. EMERGENCY CONTACT MANAGEMENT -->
+          <div class="card contacts-card" id="contactsSection">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon"><i class="fa-solid fa-address-book"></i></div>
+                <div>
+                  <h3 class="card-title" data-i18n="contactsTitle">Trusted Emergency Contacts</h3>
+                  <p class="card-subtitle" data-i18n="contactsSubtitle">Verified guardians and contacts who receive your SOS broadcasts</p>
+                </div>
+              </div>
+              <button type="button" class="btn-primary btn-sm" id="btnAddContactModal">
+                <i class="fa-solid fa-user-plus"></i>
+                <span data-i18n="addContactBtn">Add Contact</span>
+              </button>
+            </div>
+
+            <div class="card-body">
+              <div class="contacts-privacy-note">
+                <i class="fa-solid fa-info-circle"></i>
+                <span data-i18n="contactsNotice">
+                  Only contacts with the <strong>"Receives SOS"</strong> badge receive alert broadcasts. In prototype mode, broadcasts appear in the live monitoring area.
+                </span>
+              </div>
+
+              <!-- Contact List Container -->
+              <div class="contacts-list" id="contactsListContainer">
+                <!-- Dynamically populated via script.js -->
+              </div>
+            </div>
+          </div>
+
+          <!-- 6. FIRST AID INFORMATION SECTION -->
+          <div class="card firstaid-card" id="firstAidSection">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon"><i class="fa-solid fa-kit-medical"></i></div>
+                <div>
+                  <h3 class="card-title" data-i18n="firstAidTitle">Emergency First Aid Guidance</h3>
+                  <p class="card-subtitle" data-i18n="firstAidSubtitle">Reliable, step-by-step guidance for critical medical situations</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <div class="firstaid-grid" id="firstAidGrid">
+                <!-- 8 Cards defined in HTML with click triggers -->
+                <button type="button" class="firstaid-card-item" data-topic="cuts">
+                  <div class="fa-item-icon"><i class="fa-solid fa-bandage"></i></div>
+                  <h4 class="fa-item-title" data-i18n="faCuts">Cuts and Bleeding</h4>
+                  <p class="fa-item-preview" data-i18n="faCutsShort">Direct pressure, cleaning, and wound dressing</p>
+                  <span class="fa-view-link"><span data-i18n="viewGuide">View Guide</span> <i class="fa-solid fa-arrow-right"></i></span>
+                </button>
+
+                <button type="button" class="firstaid-card-item" data-topic="burns">
+                  <div class="fa-item-icon"><i class="fa-solid fa-fire"></i></div>
+                  <h4 class="fa-item-title" data-i18n="faBurns">Burns & Scalds</h4>
+                  <p class="fa-item-preview" data-i18n="faBurnsShort">Cool running water, protecting skin, blisters</p>
+                  <span class="fa-view-link"><span data-i18n="viewGuide">View Guide</span> <i class="fa-solid fa-arrow-right"></i></span>
+                </button>
+
+                <button type="button" class="firstaid-card-item" data-topic="fainting">
+                  <div class="fa-item-icon"><i class="fa-solid fa-person-falling"></i></div>
+                  <h4 class="fa-item-title" data-i18n="faFainting">Fainting & Syncope</h4>
+                  <p class="fa-item-preview" data-i18n="faFaintingShort">Elevating legs, recovery position, airflow</p>
+                  <span class="fa-view-link"><span data-i18n="viewGuide">View Guide</span> <i class="fa-solid fa-arrow-right"></i></span>
+                </button>
+
+                <button type="button" class="firstaid-card-item" data-topic="choking">
+                  <div class="fa-item-icon"><i class="fa-solid fa-lungs"></i></div>
+                  <h4 class="fa-item-title" data-i18n="faChoking">Choking</h4>
+                  <p class="fa-item-preview" data-i18n="faChokingShort">Back blows, Heimlich maneuver, clearing airway</p>
+                  <span class="fa-view-link"><span data-i18n="viewGuide">View Guide</span> <i class="fa-solid fa-arrow-right"></i></span>
+                </button>
+
+                <button type="button" class="firstaid-card-item" data-topic="fractures">
+                  <div class="fa-item-icon"><i class="fa-solid fa-bone"></i></div>
+                  <h4 class="fa-item-title" data-i18n="faFractures">Fractures & Sprains</h4>
+                  <p class="fa-item-preview" data-i18n="faFracturesShort">Immobilization, cold compress, support splints</p>
+                  <span class="fa-view-link"><span data-i18n="viewGuide">View Guide</span> <i class="fa-solid fa-arrow-right"></i></span>
+                </button>
+
+                <button type="button" class="firstaid-card-item" data-topic="nosebleeds">
+                  <div class="fa-item-icon"><i class="fa-solid fa-droplet"></i></div>
+                  <h4 class="fa-item-title" data-i18n="faNosebleeds">Nosebleeds</h4>
+                  <p class="fa-item-preview" data-i18n="faNosebleedsShort">Lean forward, pinch soft cartilage, cold pack</p>
+                  <span class="fa-view-link"><span data-i18n="viewGuide">View Guide</span> <i class="fa-solid fa-arrow-right"></i></span>
+                </button>
+
+                <button type="button" class="firstaid-card-item" data-topic="shock">
+                  <div class="fa-item-icon"><i class="fa-solid fa-bolt"></i></div>
+                  <h4 class="fa-item-title" data-i18n="faShock">Electric Shock</h4>
+                  <p class="fa-item-preview" data-i18n="faShockShort">Cut power source safely, check breathing, call 108</p>
+                  <span class="fa-view-link"><span data-i18n="viewGuide">View Guide</span> <i class="fa-solid fa-arrow-right"></i></span>
+                </button>
+
+                <button type="button" class="firstaid-card-item" data-topic="cpr">
+                  <div class="fa-item-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+                  <h4 class="fa-item-title" data-i18n="faCpr">CPR & Emergency Response</h4>
+                  <p class="fa-item-preview" data-i18n="faCprShort">Chest compressions, 100-120 bpm, rescue breaths</p>
+                  <span class="fa-view-link"><span data-i18n="viewGuide">View Guide</span> <i class="fa-solid fa-arrow-right"></i></span>
+                </button>
+              </div>
+
+              <!-- Medical Disclaimer Note -->
+              <div class="medical-disclaimer-note">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span data-i18n="firstAidDisclaimer">
+                  <strong>Important Notice:</strong> This guidance is for preliminary first-aid reference only. In life-threatening emergencies, immediately call <strong>108 (Ambulance)</strong> or <strong>112</strong>. It does not replace professional medical diagnosis or clinical treatment.
+                </span>
+              </div>
+            </div>
+          </div>
+
+        </div> <!-- /panel-body -->
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- COLUMN 2: EMERGENCY CONTACT MONITORING AREA             -->
+      <!-- ======================================================== -->
+      <section class="dashboard-panel monitor-panel" id="monitorPanel" aria-labelledby="monitorAreaHeading">
+        <div class="panel-header monitor-panel-header">
+          <div class="panel-title-group">
+            <h2 id="monitorAreaHeading" class="panel-title">
+              <i class="fa-solid fa-tower-broadcast"></i>
+              <span data-i18n="monitorTitle">Emergency Contact Live Monitor</span>
+            </h2>
+            <span class="panel-subtitle" data-i18n="monitorSubtitle">Real-time status view as seen by your designated guardians</span>
+          </div>
+          <div class="sync-status-badge" id="monitorSyncBadge">
+            <span class="pulse-dot"></span>
+            <span id="monitorSyncText" data-i18n="syncedLive">Live Feed Synced</span>
+          </div>
+        </div>
+
+        <div class="panel-body">
+
+          <!-- Connected User Card -->
+          <div class="monitor-user-card">
+            <div class="muc-header">
+              <div class="muc-avatar" id="monUserAvatar">JD</div>
+              <div class="muc-details">
+                <div class="muc-name" id="monUserName">Jane Doe</div>
+                <div class="muc-phone" id="monUserPhone">+91 98765 43210</div>
+              </div>
+              <div class="muc-status-tag" id="monStatusTag">
+                <span class="tag-dot dot-green" id="monTagDot"></span>
+                <span id="monTagText" data-i18n="statusNormal">Normal / Protected</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alert Broadcast Card -->
+          <div class="card monitor-alert-card" id="monAlertCard">
+            <div class="mac-header">
+              <h3 class="mac-title" data-i18n="alertBroadcastTitle">SOS Broadcast State</h3>
+              <span class="mac-time" id="monAlertTime">No active alerts</span>
+            </div>
+            <div class="mac-body">
+              <div class="mac-state-indicator indicator-clear" id="monStateIndicator">
+                <div class="state-icon"><i class="fa-solid fa-shield-check" id="monStateIcon"></i></div>
+                <div class="state-copy">
+                  <h4 class="state-title" id="monAlertStateTitle" data-i18n="noEmergencyTitle">No Emergency Reported</h4>
+                  <p class="state-desc" id="monAlertStateDesc" data-i18n="noEmergencyDesc">User has not activated emergency SOS. System monitoring on standby.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Location Telemetry & Live Map -->
+          <div class="card monitor-location-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon"><i class="fa-solid fa-map-location-dot"></i></div>
+                <div>
+                  <h3 class="card-title" data-i18n="sharedLocationTitle">User Live Location Feed</h3>
+                  <p class="card-subtitle" data-i18n="sharedLocationSubtitle">Real-time GPS stream when user grants location sharing consent</p>
+                </div>
+              </div>
+              <div class="sharing-badge-pill badge-stopped" id="monSharingBadge">
+                <i class="fa-solid fa-location-slash" id="monSharingIcon"></i>
+                <span id="monSharingText" data-i18n="sharingStopped">Sharing Stopped</span>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <!-- Location coordinates readout -->
+              <div class="monitor-coord-grid">
+                <div class="coord-box">
+                  <span class="coord-label" data-i18n="monLat">Latitude</span>
+                  <strong class="coord-val" id="monValLat">--.----</strong>
+                </div>
+                <div class="coord-box">
+                  <span class="coord-label" data-i18n="monLng">Longitude</span>
+                  <strong class="coord-val" id="monValLng">--.----</strong>
+                </div>
+                <div class="coord-box">
+                  <span class="coord-label" data-i18n="monAccuracy">Accuracy</span>
+                  <strong class="coord-val" id="monValAccuracy">-- m</strong>
+                </div>
+                <div class="coord-box">
+                  <span class="coord-label" data-i18n="monReceived">Updated</span>
+                  <strong class="coord-val" id="monValReceived">Standby</strong>
+                </div>
+              </div>
+
+              <!-- Monitor Leaflet Map -->
+              <div class="map-container-wrapper">
+                <div id="monitorMap" class="leaflet-map-canvas" aria-label="Emergency contact map view"></div>
+                <div class="map-overlay-status" id="monitorMapOverlay">
+                  <i class="fa-solid fa-satellite-dish"></i>
+                  <span id="monMapOverlayText" data-i18n="monMapStandby">Awaiting user location broadcast. Coordinates appear here once consented.</span>
+                </div>
+              </div>
+
+              <!-- Contact Quick Response Action Toolbar -->
+              <div class="monitor-response-bar">
+                <a href="tel:112" class="btn-resp btn-resp-police">
+                  <i class="fa-solid fa-phone"></i>
+                  <span data-i18n="callPoliceBtn">Call Police (112)</span>
+                </a>
+                <a href="tel:108" class="btn-resp btn-resp-medical">
+                  <i class="fa-solid fa-truck-medical"></i>
+                  <span data-i18n="callAmbulanceBtn">Call Ambulance (108)</span>
+                </a>
+                <button type="button" class="btn-resp btn-resp-directions" id="btnOpenDirections">
+                  <i class="fa-solid fa-diamond-turn-right"></i>
+                  <span data-i18n="getDirectionsBtn">Open Navigation</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Real-Time Event Audit Feed -->
+          <div class="card event-log-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                <div>
+                  <h3 class="card-title" data-i18n="eventLogTitle">Emergency Activity Audit Log</h3>
+                  <p class="card-subtitle" data-i18n="eventLogSubtitle">Chronological log of alerts, location toggles, and safety updates</p>
+                </div>
+              </div>
+              <button type="button" class="btn-clear-log" id="btnClearLog" title="Clear Event Log">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+            <div class="card-body">
+              <div class="event-feed-list" id="eventFeedList">
+                <!-- Populated dynamically via script.js -->
+              </div>
+            </div>
+          </div>
+
+        </div> <!-- /panel-body -->
+      </section>
+
+    </div> <!-- /dashboard-grid -->
+  </main>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="fb-logo"><i class="fa-solid fa-shield-heart"></i> SafeContact</div>
+          <p class="fb-tagline" data-i18n="tagline">“Your Safety, Always Within Reach!”</p>
+          <p class="fb-desc" data-i18n="footerDesc">
+            SafeContact is an emergency safety platform designed for academic demonstration and personal preparedness. Developed as a prototype to demonstrate emergency contact access, consent-based location sharing, and safety information.
+          </p>
+        </div>
+
+        <div class="footer-links-group">
+          <h4 class="footer-heading" data-i18n="quickHelplines">Quick Helplines</h4>
+          <ul class="footer-list">
+            <li><a href="tel:112"><i class="fa-solid fa-phone"></i> National Emergency: 112</a></li>
+            <li><a href="tel:108"><i class="fa-solid fa-phone"></i> Medical Ambulance: 108</a></li>
+            <li><a href="tel:101"><i class="fa-solid fa-phone"></i> Fire Brigade: 101</a></li>
+            <li><a href="tel:181"><i class="fa-solid fa-phone"></i> Women Helpline: 181</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-group">
+          <h4 class="footer-heading" data-i18n="demoArch">Architecture & Tech</h4>
+          <ul class="footer-list">
+            <li><span><i class="fa-brands fa-html5"></i> Semantic HTML5 & CSS3</span></li>
+            <li><span><i class="fa-brands fa-js"></i> Vanilla JS + Geolocation API</span></li>
+            <li><span><i class="fa-solid fa-map"></i> Leaflet + OpenStreetMap</span></li>
+            <li><span><i class="fa-brands fa-python"></i> Python Flask REST API</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p class="copyright" data-i18n="footerCopyright">
+          © 2026 SafeContact Platform. Designed with care for College Project Demonstration. Local prototype mode active.
+        </p>
+        <div class="footer-status">
+          <span class="bullet-dot"></span> <span data-i18n="collegeReady">College Project Demonstration Edition</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ======================================================== -->
+  <!-- MODALS SECTION                                           -->
+  <!-- ======================================================== -->
+
+  <!-- 1. INITIAL REGISTRATION & PROFILE MODAL -->
+  <div class="modal-backdrop hidden" id="registrationModal" role="dialog" aria-modal="true" aria-labelledby="regModalTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon"><i class="fa-solid fa-user-plus"></i></div>
+          <div>
+            <h3 class="modal-title" id="regModalTitle" data-i18n="regTitle">Welcome to SafeContact</h3>
+            <p class="modal-subtitle" data-i18n="regSubtitle">Complete your emergency safety profile to get started</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="btnCloseRegModal" aria-label="Close Profile Modal">&times;</button>
+      </div>
+
+      <form id="registrationForm" novalidate>
+        <div class="modal-body">
+          <div class="form-disclaimer-notice">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span data-i18n="regPrivacyNote">
+              <strong>Local Privacy Notice:</strong> This prototype securely stores your profile details locally in your browser storage (or syncs with your configured Flask backend). We do not collect unnecessary tracking data.
+            </span>
+          </div>
+
+          <!-- Full Name -->
+          <div class="form-field">
+            <label for="regFullName" class="form-label">
+              <span data-i18n="lblFullName">Full Name</span> <span class="required">*</span>
+            </label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-user"></i>
+              <input type="text" id="regFullName" class="form-input" placeholder="e.g. Jane Doe" required autocomplete="name">
+            </div>
+            <div class="field-error" id="errFullName"></div>
+          </div>
+
+          <!-- Phone Number -->
+          <div class="form-field">
+            <label for="regPhone" class="form-label">
+              <span data-i18n="lblPhone">Phone Number</span> <span class="required">*</span>
+            </label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-phone"></i>
+              <input type="tel" id="regPhone" class="form-input" placeholder="e.g. +91 98765 43210" required autocomplete="tel">
+            </div>
+            <div class="field-error" id="errPhone"></div>
+          </div>
+
+          <!-- Email Address -->
+          <div class="form-field">
+            <label for="regEmail" class="form-label">
+              <span data-i18n="lblEmail">Email Address</span> <span class="required">*</span>
+            </label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-envelope"></i>
+              <input type="email" id="regEmail" class="form-input" placeholder="e.g. jane.doe@example.com" required autocomplete="email">
+            </div>
+            <div class="field-error" id="errEmail"></div>
+          </div>
+
+          <!-- Age -->
+          <div class="form-field">
+            <label for="regAge" class="form-label">
+              <span data-i18n="lblAge">Age</span> <span class="required">*</span>
+            </label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-calendar"></i>
+              <input type="number" id="regAge" class="form-input" placeholder="e.g. 21" min="1" max="120" required>
+            </div>
+            <div class="field-error" id="errAge"></div>
+          </div>
+
+          <div class="form-divider">
+            <span data-i18n="lblEmergencyContactHeader">Primary Emergency Contact</span>
+          </div>
+
+          <!-- Emergency Contact Name -->
+          <div class="form-field">
+            <label for="regEmContactName" class="form-label">
+              <span data-i18n="lblEmContactName">Emergency Contact Name</span> <span class="required">*</span>
+            </label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-user-shield"></i>
+              <input type="text" id="regEmContactName" class="form-input" placeholder="e.g. Robert Doe (Father)" required>
+            </div>
+            <div class="field-error" id="errEmContactName"></div>
+          </div>
+
+          <!-- Emergency Contact Phone Number -->
+          <div class="form-field">
+            <label for="regEmContactPhone" class="form-label">
+              <span data-i18n="lblEmContactPhone">Emergency Contact Phone Number</span> <span class="required">*</span>
+            </label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-phone-flip"></i>
+              <input type="tel" id="regEmContactPhone" class="form-input" placeholder="e.g. +91 98765 43211" required>
+            </div>
+            <div class="field-error" id="errEmContactPhone"></div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn-primary btn-block" id="btnSaveRegistration">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span data-i18n="btnSaveContinue">Save & Continue</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. SOS CONFIRMATION MODAL -->
+  <div class="modal-backdrop hidden" id="sosConfirmModal" role="dialog" aria-modal="true" aria-labelledby="sosConfirmTitle">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-header sos-modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon icon-alert"><i class="fa-solid fa-triangle-exclamation"></i></div>
+          <div>
+            <h3 class="modal-title" id="sosConfirmTitle" data-i18n="sosConfirmHeader">Confirm Emergency SOS</h3>
+            <p class="modal-subtitle" data-i18n="sosConfirmSubtitle">This will alert your registered emergency contacts</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-body text-center">
+        <p class="sos-confirm-message" data-i18n="sosConfirmBody">
+          Are you sure you want to trigger an Emergency SOS Alert? This will broadcast an immediate distress status to your primary contacts and monitoring dashboard.
+        </p>
+        <div class="sos-countdown-box">
+          <span class="countdown-label" data-i18n="autoConfirmIn">Activating in</span>
+          <span class="countdown-seconds" id="sosCountdownNumber">3</span>
+        </div>
+      </div>
+      <div class="modal-footer modal-footer-dual">
+        <button type="button" class="btn-secondary" id="btnCancelSosCountdown" data-i18n="btnCancel">
+          <i class="fa-solid fa-xmark"></i> Cancel
+        </button>
+        <button type="button" class="btn-danger" id="btnConfirmSosImmediate" data-i18n="btnConfirmSosNow">
+          <i class="fa-solid fa-bolt"></i> Yes, Trigger SOS Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. LOCATION SHARING CONSENT MODAL -->
+  <div class="modal-backdrop hidden" id="locationConsentModal" role="dialog" aria-modal="true" aria-labelledby="locConsentTitle">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon"><i class="fa-solid fa-location-dot"></i></div>
+          <div>
+            <h3 class="modal-title" id="locConsentTitle" data-i18n="locConsentHeader">Share Live Location?</h3>
+            <p class="modal-subtitle" data-i18n="locConsentSubtitle">Consent required for emergency transmission</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-body">
+        <p class="consent-text" data-i18n="locConsentBody">
+          SafeContact requests permission to access and stream your GPS location coordinates. This allows your emergency contacts to see your precise location on a live interactive map during this alert.
+        </p>
+        <ul class="consent-bullets">
+          <li><i class="fa-solid fa-check"></i> <span data-i18n="consentBullet1">Location is shared only with your authorized contacts.</span></li>
+          <li><i class="fa-solid fa-check"></i> <span data-i18n="consentBullet2">You can tap "STOP LIVE LOCATION" at any moment to immediately halt sharing.</span></li>
+          <li><i class="fa-solid fa-check"></i> <span data-i18n="consentBullet3">No location data is permanently saved or tracked without authorization.</span></li>
+        </ul>
+      </div>
+      <div class="modal-footer modal-footer-dual">
+        <button type="button" class="btn-secondary" id="btnDeclineLocationConsent" data-i18n="btnNotNow">
+          Not Now
+        </button>
+        <button type="button" class="btn-primary" id="btnAgreeLocationConsent" data-i18n="btnAgreeShare">
+          <i class="fa-solid fa-location-arrow"></i> Agree & Share Location
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. SECURITY PIN SETUP & MANAGEMENT MODAL -->
+  <div class="modal-backdrop hidden" id="pinConfigModal" role="dialog" aria-modal="true" aria-labelledby="pinConfigTitle">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon"><i class="fa-solid fa-key"></i></div>
+          <div>
+            <h3 class="modal-title" id="pinConfigTitle" data-i18n="pinConfigHeader">Security PIN Protection</h3>
+            <p class="modal-subtitle" data-i18n="pinConfigSubtitle">Set an optional 4-digit PIN for user area access</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="btnClosePinModal" aria-label="Close PIN Settings">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="pinStatusDisplay" class="pin-status-box">
+          <span id="pinStatusText">Current Status: PIN Not Set</span>
+        </div>
+
+        <div class="form-field">
+          <label for="newPinInput" class="form-label" data-i18n="lblCreatePin">New 4-Digit PIN</label>
+          <input type="password" id="newPinInput" class="form-input text-center" maxlength="4" placeholder="••••" inputmode="numeric" pattern="[0-9]*">
+        </div>
+
+        <div class="form-field">
+          <label for="confirmPinInput" class="form-label" data-i18n="lblConfirmPin">Confirm 4-Digit PIN</label>
+          <input type="password" id="confirmPinInput" class="form-input text-center" maxlength="4" placeholder="••••" inputmode="numeric" pattern="[0-9]*">
+        </div>
+
+        <div class="field-error" id="pinConfigError"></div>
+
+        <div class="pin-info-note">
+          <i class="fa-solid fa-circle-info"></i>
+          <span data-i18n="pinLocalNote">
+            This PIN provides browser-level interface privacy during presentations. Real-world deployment uses authenticated multi-factor accounts.
+          </span>
+        </div>
+      </div>
+      <div class="modal-footer modal-footer-dual">
+        <button type="button" class="btn-secondary" id="btnRemovePin" data-i18n="btnRemovePin">
+          Remove PIN
+        </button>
+        <button type="button" class="btn-primary" id="btnSavePin" data-i18n="btnSavePin">
+          <i class="fa-solid fa-check"></i> Save PIN
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. ADD / EDIT CONTACT MODAL -->
+  <div class="modal-backdrop hidden" id="contactEditModal" role="dialog" aria-modal="true" aria-labelledby="contactModalTitle">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon"><i class="fa-solid fa-user-pen"></i></div>
+          <div>
+            <h3 class="modal-title" id="contactModalTitle" data-i18n="addContactTitle">Add Emergency Contact</h3>
+            <p class="modal-subtitle" data-i18n="addContactSubtitle">Enter contact details for emergency notifications</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="btnCloseContactModal" aria-label="Close Contact Modal">&times;</button>
+      </div>
+      <form id="contactForm" novalidate>
+        <div class="modal-body">
+          <input type="hidden" id="contactEditId" value="">
+
+          <div class="form-field">
+            <label for="contactName" class="form-label">
+              <span data-i18n="lblName">Name</span> <span class="required">*</span>
+            </label>
+            <input type="text" id="contactName" class="form-input" placeholder="e.g. Dr. Priya Sharma" required>
+            <div class="field-error" id="errContactName"></div>
+          </div>
+
+          <div class="form-field">
+            <label for="contactPhone" class="form-label">
+              <span data-i18n="lblPhone">Phone Number</span> <span class="required">*</span>
+            </label>
+            <input type="tel" id="contactPhone" class="form-input" placeholder="e.g. +91 98765 11223" required>
+            <div class="field-error" id="errContactPhone"></div>
+          </div>
+
+          <div class="form-field">
+            <label for="contactRelation" class="form-label" data-i18n="lblRelationship">Relationship</label>
+            <select id="contactRelation" class="form-select">
+              <option value="Parent">Parent</option>
+              <option value="Sibling">Sibling</option>
+              <option value="Spouse">Spouse / Partner</option>
+              <option value="Friend">Friend / Colleague</option>
+              <option value="Guardian">Guardian</option>
+              <option value="Other">Other Trusted Contact</option>
+            </select>
+          </div>
+
+          <div class="form-checkbox-field">
+            <input type="checkbox" id="contactReceivesSos" checked>
+            <label for="contactReceivesSos" data-i18n="lblReceivesSos">Send SOS distress broadcasts to this contact</label>
+          </div>
+        </div>
+        <div class="modal-footer modal-footer-dual">
+          <button type="button" class="btn-secondary" id="btnCancelContact" data-i18n="btnCancel">Cancel</button>
+          <button type="submit" class="btn-primary" id="btnSaveContact" data-i18n="btnSaveContact">
+            <i class="fa-solid fa-check"></i> Save Contact
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 6. FIRST AID DETAIL MODAL -->
+  <div class="modal-backdrop hidden" id="firstAidModal" role="dialog" aria-modal="true" aria-labelledby="faModalTitle">
+    <div class="modal-dialog modal-dialog-md">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon" id="faModalIcon"><i class="fa-solid fa-kit-medical"></i></div>
+          <div>
+            <h3 class="modal-title" id="faModalTitle">First Aid Topic</h3>
+            <span class="fa-urgency-badge" id="faModalUrgency">Emergency Protocol</span>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="btnCloseFaModal" aria-label="Close First Aid Guide">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="fa-overview-box" id="faModalOverview">
+          <!-- Overview text -->
+        </div>
+
+        <div class="fa-steps-section">
+          <h4 class="fa-section-heading">
+            <i class="fa-solid fa-list-ol"></i> <span data-i18n="faStepByStep">Immediate Step-by-Step Action:</span>
+          </h4>
+          <ol class="fa-action-steps" id="faModalSteps">
+            <!-- Step items inserted dynamically -->
+          </ol>
+        </div>
+
+        <div class="fa-warnings-section">
+          <h4 class="fa-section-heading warnings-title">
+            <i class="fa-solid fa-ban"></i> <span data-i18n="faDoNot">What NOT To Do (Crucial Warnings):</span>
+          </h4>
+          <ul class="fa-warning-list" id="faModalWarnings">
+            <!-- Warnings inserted dynamically -->
+          </ul>
+        </div>
+
+        <div class="fa-call-doctor-box">
+          <div class="fcd-icon"><i class="fa-solid fa-phone-volume"></i></div>
+          <div class="fcd-content">
+            <strong data-i18n="faWhenToCall">When to Call 108 / 112 Immediately:</strong>
+            <p id="faModalWhenCall">If symptoms persist or victim becomes unresponsive, dial emergency immediately.</p>
+          </div>
+          <a href="tel:108" class="btn-call-108" aria-label="Call Ambulance 108">
+            <i class="fa-solid fa-phone"></i> 108
+          </a>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary btn-block" id="btnCloseFaModalBottom" data-i18n="btnClose">
+          Close Guide
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- SafeContact Application Script -->
+  <script src="script.js"></script>
+</body>
+</html>
